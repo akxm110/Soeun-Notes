@@ -97,7 +97,10 @@
             <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <div class="text-center">
                     <p class="text-gray-600 text-sm mb-2">총 적립 포인트</p>
-                    <p id="total-points-display" class="text-4xl font-bold text-blue-600">0 P</p>
+                    <p id="total-points-display" class="text-4xl font-bold text-blue-600 mb-4">0 P</p>
+                    <button id="reset-points-btn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-300">
+                        포인트 초기화
+                    </button>
                 </div>
             </div>
             
@@ -248,6 +251,7 @@
         const pointsBox = document.getElementById('points-box');
         const pointHistoryList = document.getElementById('point-history-list');
         const totalPointsDisplay = document.getElementById('total-points-display');
+        const resetPointsBtn = document.getElementById('reset-points-btn');
         const achievementMessage = document.getElementById('achievement-message');
         const achievementCategory = document.getElementById('achievement-category');
         const achievementCloseBtn = document.getElementById('achievement-close-btn');
@@ -613,7 +617,7 @@
                         </div>
                         ${isMultiViewMode ? 
                             `<input type="checkbox" class="category-checkbox w-6 h-6 mt-1" data-category="${escapeHTML(categoryName)}">` : 
-                            `<button class="delete-category-btn text-red-500 hover:text-red-700 font-bold text-2xl ml-2" data-category-id="${doc.id}" data-category-name="${escapeHTML(categoryName)}">&times;</button>`
+                            `<button class="delete-category-btn w-6 h-6 bg-black hover:bg-gray-800 rounded flex items-center justify-center text-white text-sm font-bold ml-2 transition-colors duration-200" data-category-id="${doc.id}" data-category-name="${escapeHTML(categoryName)}">×</button>`
                         }
                     </div>
                 `;
@@ -1079,6 +1083,32 @@
                 achievementMessage.classList.add('hidden');
             }, 300);
         }
+        
+        // 포인트 초기화
+        async function resetPoints() {
+            if (!confirm('정말로 모든 포인트와 적립 내역을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                // 포인트를 0으로 설정
+                await setDoc(pointsDocRef, { value: 0 });
+                
+                // 모든 포인트 내역 삭제
+                const historySnapshot = await getDocs(pointHistoryCollectionRef);
+                const deletePromises = [];
+                historySnapshot.docs.forEach(historyDoc => {
+                    deletePromises.push(deleteDoc(doc(db, 'users', userId, 'pointHistory', historyDoc.id)));
+                });
+                
+                await Promise.all(deletePromises);
+                
+                alert('포인트가 초기화되었습니다.');
+            } catch (error) {
+                console.error("Error resetting points: ", error);
+                alert('포인트 초기화 실패');
+            }
+        }
 
         // --- 유틸리티 ---
         function escapeHTML(str) {
@@ -1095,6 +1125,7 @@
         backToHomePointsBtn.addEventListener('click', showHomePage);
         pointHistoryBtn.addEventListener('click', showPointHistoryPage);
         pointsBox.addEventListener('click', showPointHistoryPage);
+        resetPointsBtn.addEventListener('click', resetPoints);
         achievementCloseBtn.addEventListener('click', hideAchievementMessage);
         
         // 멀티뷰 버튼 클릭
