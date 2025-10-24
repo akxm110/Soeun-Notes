@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메모 포인트 앱</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Inter 폰트 적용 */
+        body {
+            font-family: "Inter", sans-serif;
+        }
+        /* "잘했어요!" 메시지 트랜지션 */
+        #toast-message {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        /* textarea 포커스 시 그림자 강조 */
+        textarea:focus-within {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* blue-500 with 50% opacity */
+        }
+        /* 모달 트랜지션 */
+        #memo-modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        #modal-content {
+            transition: transform 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+    <!-- 전체 래퍼 -->
+    <div class="container mx-auto max-w-7xl p-4">
+
+        <!-- 헤더: 타이틀 및 포인트 (항상 보임) -->
+        <header id="app-header" class="flex justify-between items-center mb-8 p-6 rounded-lg shadow-md transition-colors duration-500">
+            <h1 class="text-3xl font-bold text-white">My Memo</h1>
+            <div class="flex items-center gap-4">
+                <button id="point-history-btn" class="hidden md:block bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                    포인트 내역
+                </button>
+                <div class="text-right cursor-pointer" id="points-box">
+                    <span class="text-sm text-gray-200">총 포인트</span>
+                    <p id="points-display" class="text-2xl font-bold text-white">0 P</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- 홈 페이지: 카테고리 대시보드 -->
+        <main id="home-page">
+            <!-- 새 카테고리 추가 폼 -->
+            <form id="category-form" class="bg-white p-4 rounded-lg shadow-md mb-8 flex space-x-3">
+                <input type="text" id="category-name-input" placeholder="새 카테고리 이름 (예: 공부)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                <button type="submit" class="text-gray-900 font-bold py-2 px-4 rounded-lg transition duration-300 shadow-sm whitespace-nowrap" style="background-color: #f5f5dc;">
+                    카테고리 추가
+                </button>
+            </form>
+
+            <!-- 카테고리 목록 헤더 및 선택 모드 -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">내 카테고리</h2>
+                <button id="multi-view-btn" class="hidden md:block bg-white text-gray-900 font-bold py-2 px-4 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition duration-300 shadow-sm">
+                    멀티뷰 선택
+                </button>
+            </div>
+            
+            <!-- 카테고리 목록 -->
+            <div id="category-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </main>
+
+        <!-- 상세 페이지: 단일 카테고리 메모 목록 -->
+        <main id="detail-page" class="hidden">
+            <button id="back-to-home" class="mb-4 text-gray-900 hover:text-gray-700 font-semibold">
+                &larr; 홈으로 돌아가기
+            </button>
+
+            <form id="memo-form" class="bg-white p-4 rounded-lg shadow-md mb-8">
+                <textarea id="memo-content" rows="2" placeholder="새 메모 작성..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
+                <button type="submit" class="w-full mt-3 text-gray-900 font-bold py-2 px-4 rounded-lg transition duration-300 shadow-sm" style="background-color: #f5f5dc;">
+                    추가하기
+                </button>
+            </form>
+
+            <h3 class="text-xl font-semibold mb-4">진행 중인 메모</h3>
+            <div id="memo-list-pending" class="grid grid-cols-1 gap-4"></div>
+        </main>
+
+        <!-- 포인트 내역 페이지 -->
+        <main id="point-history-page" class="hidden">
+            <button id="back-to-home-points" class="mb-4 text-gray-900 hover:text-gray-700 font-semibold">
+                &larr; 홈으로 돌아가기
+            </button>
+            
+            <h2 class="text-2xl font-bold mb-6">포인트 적립 내역</h2>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div class="text-center">
+                    <p class="text-gray-600 text-sm mb-2">총 적립 포인트</p>
+                    <p id="total-points-display" class="text-4xl font-bold text-blue-600">0 P</p>
+                </div>
+            </div>
+            
+            <div id="point-history-list" class="space-y-3"></div>
+        </main>
+
+        <!-- 멀티뷰 페이지: 여러 카테고리 동시에 보기 -->
+        <main id="multi-view-page" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button id="back-to-home-multi" class="text-gray-900 hover:text-gray-700 font-semibold">
+                    &larr; 홈으로 돌아가기
+                </button>
+                <!-- 열 개수 선택 -->
+                <div class="hidden md:flex items-center space-x-2">
+                    <span class="text-sm text-gray-600">창 개수:</span>
+                    <button data-multi-cols="1" class="multi-col-btn px-3 py-1 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition duration-200">1</button>
+                    <button data-multi-cols="2" class="multi-col-btn px-3 py-1 rounded-lg border-2 border-blue-500 bg-blue-50 transition duration-200">2</button>
+                    <button data-multi-cols="3" class="multi-col-btn px-3 py-1 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition duration-200">3</button>
+                    <button data-multi-cols="4" class="multi-col-btn px-3 py-1 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition duration-200">4</button>
+                </div>
+            </div>
+            
+            <!-- 멀티뷰 컨테이너 -->
+            <div id="multi-view-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </main>
+    </div>
+
+    <!-- "잘했어요!" 토스트 메시지 -->
+    <div id="toast-message" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-xl text-lg font-semibold opacity-0 translate-y-5 z-50">
+        잘했어요!
+    </div>
+    
+    <!-- "멋지게 해냈습니다!" 대형 메시지 -->
+    <div id="achievement-message" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hidden z-50">
+        <div class="bg-white rounded-2xl p-8 text-center transform scale-95 transition-all duration-500 shadow-2xl max-w-md mx-4">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">멋지게 해냈습니다!</h2>
+            <p class="text-gray-600 mb-4" id="achievement-category"></p>
+            <p class="text-5xl font-bold text-yellow-500 mb-4">+1000 P</p>
+            <button id="achievement-close-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                확인
+            </button>
+        </div>
+    </div>
+
+    <!-- 메모 관리 모달 -->
+    <div id="memo-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 opacity-0 hidden z-50">
+        <div id="modal-content" class="bg-white w-full max-w-md p-6 rounded-lg shadow-xl transform scale-95">
+            <h3 class="text-xl font-bold mb-4">메모 관리</h3>
+            <textarea id="modal-memo-text" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
+            <input type="hidden" id="modal-memo-id">
+            <div class="mt-6 flex justify-between space-x-3">
+                <!-- 왼쪽 버튼 그룹 (수정, 삭제) -->
+                <div class="flex space-x-2">
+                    <button id="modal-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-700 transition duration-300 shadow-sm">
+                        수정
+                    </button>
+                    <button id="modal-delete-btn" class="bg-red-500 text-white font-semibold py-2 px-5 rounded-lg hover:bg-red-600 transition duration-300 shadow-sm">
+                        삭제
+                    </button>
+                </div>
+                <!-- 오른쪽 버튼 그룹 (완료, 취소) -->
+                <div class="flex space-x-2">
+                    <button id="modal-complete-btn" class="bg-green-500 text-white font-semibold py-2 px-5 rounded-lg hover:bg-green-600 transition duration-300 shadow-sm">
+                        완료
+                    </button>
+                    <button id="modal-cancel-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg hover:bg-gray-400 transition duration-300">
+                        취소
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            getDocs,
+            setDoc, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc,
+            onSnapshot, 
+            collection,
+            query, 
+            where, 
+            orderBy,
+            Timestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 월별 색상 설정 ---
+        const headerMonthColors = [
+            'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 
+            'bg-teal-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 
+            'bg-pink-500', 'bg-red-600', 'bg-orange-600', 'bg-green-600'
+        ];
+        const categoryMonthColors = [
+            'bg-red-100', 'bg-orange-100', 'bg-yellow-100', 'bg-green-100', 
+            'bg-teal-100', 'bg-blue-100', 'bg-indigo-100', 'bg-purple-100', 
+            'bg-pink-100', 'bg-red-200', 'bg-orange-200', 'bg-green-200'
+        ];
+
+        // --- 전역 변수 ---
+        let db, auth, appId, userId;
+        let categoriesCollectionRef, memosCollectionRef, pointsDocRef;
+        let currentPoints = 0;
+        let isAuthReady = false;
+        let currentCategory = null;
+        let isMultiViewMode = false; // 멀티뷰 선택 모드
+        let selectedCategories = []; // 선택된 카테고리들
+        let currentMultiCols = 2; // 멀티뷰 기본 열 개수
+        let multiViewUnsubscribers = {}; // 멀티뷰 리스너들
+        let pointHistoryCollectionRef; // 포인트 내역
+        let unsubscribePointHistory = null;
+        
+        let unsubscribeCategories = null; 
+        let unsubscribePendingMemos = null; 
+
+        // --- DOM 요소 ---
+        const appHeader = document.getElementById('app-header');
+        const pointsDisplay = document.getElementById('points-display');
+        const toastMessage = document.getElementById('toast-message');
+
+        const homePage = document.getElementById('home-page');
+        const detailPage = document.getElementById('detail-page');
+        const multiViewPage = document.getElementById('multi-view-page');
+        const pointHistoryPage = document.getElementById('point-history-page');
+
+        const categoryForm = document.getElementById('category-form');
+        const categoryNameInput = document.getElementById('category-name-input');
+        const categoryList = document.getElementById('category-list');
+
+        const backToHomeBtn = document.getElementById('back-to-home');
+        const backToHomeMultiBtn = document.getElementById('back-to-home-multi');
+        const backToHomePointsBtn = document.getElementById('back-to-home-points');
+        const multiViewBtn = document.getElementById('multi-view-btn');
+        const multiViewContainer = document.getElementById('multi-view-container');
+        const multiColButtons = document.querySelectorAll('.multi-col-btn');
+        const pointHistoryBtn = document.getElementById('point-history-btn');
+        const pointsBox = document.getElementById('points-box');
+        const pointHistoryList = document.getElementById('point-history-list');
+        const totalPointsDisplay = document.getElementById('total-points-display');
+        const achievementMessage = document.getElementById('achievement-message');
+        const achievementCategory = document.getElementById('achievement-category');
+        const achievementCloseBtn = document.getElementById('achievement-close-btn');
+        
+        const memoForm = document.getElementById('memo-form');
+        const memoContentInput = document.getElementById('memo-content');
+        const memoListPending = document.getElementById('memo-list-pending'); 
+
+        const memoModal = document.getElementById('memo-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalMemoText = document.getElementById('modal-memo-text');
+        const modalMemoId = document.getElementById('modal-memo-id');
+        const modalSaveBtn = document.getElementById('modal-save-btn');
+        const modalDeleteBtn = document.getElementById('modal-delete-btn');
+        const modalCompleteBtn = document.getElementById('modal-complete-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+        // --- 헤더 색상 설정 ---
+        function setHeaderColor() {
+            const currentMonth = new Date().getMonth();
+            const colorClass = headerMonthColors[currentMonth];
+            appHeader.classList.forEach(cls => {
+                if (cls.startsWith('bg-')) appHeader.classList.remove(cls);
+            });
+            appHeader.classList.add(colorClass);
+        }
+
+        // --- Firebase 초기화 ---
+        async function initFirebase() {
+            const firebaseConfig = {
+                apiKey: "AIzaSyBWRcoU1w3vJ81oBIYpFDHYw4IBDGnMgsQ",
+                authDomain: "soeun-notes.firebaseapp.com",
+                projectId: "soeun-notes",
+                storageBucket: "soeun-notes.firebasestorage.app",
+                messagingSenderId: "960037754876",
+                appId: "1:960037754876:web:2cb07f38e29f69e7ffc479"
+            };
+            
+            appId = "soeun-notes";
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        console.log("Authenticated User ID:", userId);
+                        
+                        categoriesCollectionRef = collection(db, 'users', userId, 'categories');
+                        memosCollectionRef = collection(db, 'users', userId, 'memos');
+                        pointsDocRef = doc(db, 'users', userId, 'userData', 'points');
+                        pointHistoryCollectionRef = collection(db, 'users', userId, 'pointHistory');
+
+                        setupPointsListener();
+                        await checkAndSeedCategories();
+                        showHomePage();
+
+                    } else {
+                        isAuthReady = false;
+                        console.log("No user signed in.");
+                        if (unsubscribeCategories) unsubscribeCategories();
+                        if (unsubscribePendingMemos) unsubscribePendingMemos();
+                    }
+                });
+
+                await signInAnonymously(auth);
+
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+            }
+        }
+
+        // 기본 카테고리 생성
+        async function checkAndSeedCategories() {
+            if (!categoriesCollectionRef) return;
+            try {
+                const snapshot = await getDocs(categoriesCollectionRef);
+                if (snapshot.empty) {
+                    console.log("Seeding default categories...");
+                    await addDoc(categoriesCollectionRef, { name: "일반" });
+                    await addDoc(categoriesCollectionRef, { name: "운동" });
+                }
+            } catch (error) {
+                console.error("Error seeding categories: ", error);
+            }
+        }
+
+        // --- 네비게이션 함수 ---
+        function showHomePage() {
+            homePage.classList.remove('hidden');
+            detailPage.classList.add('hidden');
+            multiViewPage.classList.add('hidden');
+            pointHistoryPage.classList.add('hidden');
+            currentCategory = null;
+            isMultiViewMode = false;
+            selectedCategories = [];
+            appHeader.querySelector('h1').textContent = 'My Memo';
+            multiViewBtn.textContent = '멀티뷰 선택';
+            multiViewBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'text-white');
+            multiViewBtn.classList.add('bg-white', 'hover:bg-gray-50', 'text-gray-900');
+
+            if (unsubscribePendingMemos) unsubscribePendingMemos();
+            if (unsubscribePointHistory) unsubscribePointHistory();
+            Object.values(multiViewUnsubscribers).forEach(unsub => unsub());
+            multiViewUnsubscribers = {};
+
+            setupCategoryListener();
+        }
+        
+        // 포인트 내역 페이지 표시
+        function showPointHistoryPage() {
+            homePage.classList.add('hidden');
+            detailPage.classList.add('hidden');
+            multiViewPage.classList.add('hidden');
+            pointHistoryPage.classList.remove('hidden');
+            appHeader.querySelector('h1').textContent = '포인트 내역';
+            
+            if (unsubscribeCategories) unsubscribeCategories();
+            
+            setupPointHistoryListener();
+        }
+
+        function showDetailPage(categoryName) {
+            homePage.classList.add('hidden');
+            detailPage.classList.remove('hidden');
+            multiViewPage.classList.add('hidden');
+            pointHistoryPage.classList.add('hidden');
+            currentCategory = categoryName;
+            
+            appHeader.querySelector('h1').textContent = categoryName;
+            memoContentInput.placeholder = `'${categoryName}'에 새 메모 추가...`;
+
+            if (unsubscribeCategories) unsubscribeCategories();
+
+            setupMemoListeners(categoryName);
+        }
+        
+        // 멀티뷰 페이지 표시
+        function showMultiViewPage() {
+            if (selectedCategories.length === 0) {
+                alert('카테고리를 선택해주세요!');
+                return;
+            }
+            
+            homePage.classList.add('hidden');
+            detailPage.classList.add('hidden');
+            multiViewPage.classList.remove('hidden');
+            pointHistoryPage.classList.add('hidden');
+            appHeader.querySelector('h1').textContent = '멀티뷰';
+            
+            if (unsubscribeCategories) unsubscribeCategories();
+            
+            renderMultiView();
+        }
+        
+        // 멀티뷰 렌더링
+        function renderMultiView() {
+            multiViewContainer.innerHTML = '';
+            
+            // 열 개수 적용
+            multiViewContainer.className = `grid grid-cols-1 md:grid-cols-${currentMultiCols} gap-6`;
+            
+            selectedCategories.forEach(categoryName => {
+                const panel = document.createElement('div');
+                panel.className = 'bg-white rounded-lg shadow-lg p-4 flex flex-col';
+                panel.innerHTML = `
+                    <div class="flex justify-between items-center mb-4 border-b pb-3">
+                        <h3 class="text-lg font-bold">${escapeHTML(categoryName)}</h3>
+                        <button class="remove-category-btn text-red-500 hover:text-red-700" data-category="${escapeHTML(categoryName)}">✕</button>
+                    </div>
+                    
+                    <!-- 메모 입력 폼 -->
+                    <form class="multi-memo-form mb-4" data-category="${escapeHTML(categoryName)}">
+                        <textarea rows="2" placeholder="메모 작성..." class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"></textarea>
+                        <button type="submit" class="w-full mt-2 text-gray-900 text-sm font-semibold py-2 px-3 rounded-lg transition duration-300" style="background-color: #f5f5dc;">
+                            추가
+                        </button>
+                    </form>
+                    
+                    <!-- 메모 목록 -->
+                    <div class="memo-panel-list space-y-2 flex-1 overflow-y-auto" data-category="${escapeHTML(categoryName)}" style="max-height: 400px;"></div>
+                `;
+                
+                multiViewContainer.appendChild(panel);
+                
+                // 해당 카테고리의 메모 리스너 설정
+                setupMultiViewMemoListener(categoryName);
+                
+                // 메모 추가 폼 이벤트
+                const form = panel.querySelector('.multi-memo-form');
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const textarea = form.querySelector('textarea');
+                    const content = textarea.value.trim();
+                    
+                    if (!content) return;
+                    
+                    try {
+                        await addDoc(memosCollectionRef, {
+                            content: content,
+                            category: categoryName,
+                            completed: false,
+                            createdAt: Timestamp.now()
+                        });
+                        textarea.value = '';
+                    } catch (error) {
+                        console.error("Error adding memo in multi-view: ", error);
+                    }
+                });
+            });
+            
+            // 제거 버튼 이벤트
+            document.querySelectorAll('.remove-category-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const category = e.target.getAttribute('data-category');
+                    selectedCategories = selectedCategories.filter(c => c !== category);
+                    if (selectedCategories.length === 0) {
+                        showHomePage();
+                    } else {
+                        renderMultiView();
+                    }
+                });
+            });
+        }
+        
+        // 멀티뷰 메모 리스너
+        function setupMultiViewMemoListener(categoryName) {
+            if (!isAuthReady || !memosCollectionRef) return;
+            
+            const memoQuery = query(
+                memosCollectionRef,
+                where("category", "==", categoryName),
+                where("completed", "==", false)
+            );
+            
+            const unsubscribe = onSnapshot(memoQuery, (snapshot) => {
+                const listElement = document.querySelector(`.memo-panel-list[data-category="${categoryName}"]`);
+                if (!listElement) return;
+                
+                listElement.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    listElement.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">메모 없음</p>';
+                    return;
+                }
+                
+                snapshot.docs.forEach(doc => {
+                    const memo = doc.data();
+                    const memoId = doc.id;
+                    
+                    const memoDiv = document.createElement('div');
+                    memoDiv.className = 'p-3 bg-white rounded-lg cursor-pointer hover:shadow-lg transition duration-200 border border-gray-200';
+                    memoDiv.dataset.id = memoId;
+                    memoDiv.innerHTML = `
+                        <p class="text-sm text-gray-900 break-words">${escapeHTML(memo.content)}</p>
+                    `;
+                    
+                    memoDiv.addEventListener('click', () => openMemoModal(memoId, memo.content));
+                    
+                    listElement.appendChild(memoDiv);
+                });
+            }, (error) => console.error(`Multi-view memo snapshot error for ${categoryName}:`, error));
+            
+            multiViewUnsubscribers[categoryName] = unsubscribe;
+        }
+        
+        // 멀티뷰 열 개수 업데이트
+        function updateMultiViewColumns() {
+            if (multiViewContainer) {
+                multiViewContainer.className = `grid grid-cols-1 md:grid-cols-${currentMultiCols} gap-6`;
+            }
+            updateMultiColButtonStyles();
+        }
+        
+        function updateMultiColButtonStyles() {
+            multiColButtons.forEach(btn => {
+                const cols = parseInt(btn.getAttribute('data-multi-cols'));
+                if (cols === currentMultiCols) {
+                    btn.classList.add('border-blue-500', 'bg-blue-50');
+                    btn.classList.remove('border-gray-300');
+                } else {
+                    btn.classList.add('border-gray-300');
+                    btn.classList.remove('border-blue-500', 'bg-blue-50');
+                }
+            });
+        }
+
+        // --- 리스너 설정 ---
+        function setupCategoryListener() {
+            if (!isAuthReady || !categoriesCollectionRef) return;
+
+            console.log("Setting up category listener");
+            if (unsubscribeCategories) unsubscribeCategories();
+
+            unsubscribeCategories = onSnapshot(categoriesCollectionRef, renderCategories, (error) => {
+                console.error("Category snapshot error:", error);
+            });
+        }
+
+        function setupMemoListeners(categoryName) {
+            if (!isAuthReady || !memosCollectionRef) return;
+
+            console.log(`Setting up memo listeners for: ${categoryName}`);
+            
+            if (unsubscribePendingMemos) unsubscribePendingMemos();
+
+            const pendingQuery = query(
+                memosCollectionRef, 
+                where("category", "==", categoryName),
+                where("completed", "==", false)
+            );
+            unsubscribePendingMemos = onSnapshot(pendingQuery, (snapshot) => {
+                renderMemos(snapshot, memoListPending);
+            }, (error) => console.error("Pending memo snapshot error:", error));
+        }
+
+        function setupPointsListener() {
+             if (!isAuthReady || !pointsDocRef) return;
+            onSnapshot(pointsDocRef, renderPoints, (error) => {
+                console.error("Points snapshot error:", error);
+            });
+            getDoc(pointsDocRef).then(renderPoints).catch(error => {
+                console.error("Initial points fetch error:", error);
+            });
+        }
+        
+        // 포인트 내역 리스너
+        function setupPointHistoryListener() {
+            if (!isAuthReady || !pointHistoryCollectionRef) return;
+            
+            if (unsubscribePointHistory) unsubscribePointHistory();
+            
+            const q = query(pointHistoryCollectionRef, orderBy("timestamp", "desc"));
+            unsubscribePointHistory = onSnapshot(q, renderPointHistory, (error) => {
+                console.error("Point history snapshot error:", error);
+            });
+        }
+
+        // --- UI 렌더링 ---
+        function renderCategories(snapshot) {
+            categoryList.innerHTML = '';
+            if (snapshot.empty) {
+                categoryList.innerHTML = '<p class="text-gray-500">카테고리를 추가해주세요.</p>';
+                return;
+            }
+
+            snapshot.docs.forEach(doc => {
+                const category = doc.data();
+                const categoryName = category.name;
+
+                const card = document.createElement('div');
+                card.className = 'p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1';
+                card.style.backgroundColor = '#f5f5dc'; // 아이보리 색상
+                
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h3 class="text-2xl font-bold text-gray-800 category-name" data-category-id="${doc.id}">${escapeHTML(categoryName)}</h3>
+                            <p class="text-gray-600 mt-2 pending-count">계산 중...</p>
+                        </div>
+                        ${isMultiViewMode ? 
+                            `<input type="checkbox" class="category-checkbox w-6 h-6 mt-1" data-category="${escapeHTML(categoryName)}">` : 
+                            `<button class="delete-category-btn text-red-500 hover:text-red-700 font-bold text-2xl ml-2" data-category-id="${doc.id}" data-category-name="${escapeHTML(categoryName)}">&times;</button>`
+                        }
+                    </div>
+                `;
+
+                updatePendingCount(card, categoryName);
+
+                const categoryNameElement = card.querySelector('.category-name');
+
+                if (!isMultiViewMode) {
+                    // 일반 클릭: 상세 페이지로 이동
+                    card.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('category-name') && !e.target.classList.contains('delete-category-btn')) {
+                            showDetailPage(categoryName);
+                        }
+                    });
+                    
+                    // 카테고리 이름 더블클릭: 수정 모드
+                    categoryNameElement.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        editCategoryName(categoryNameElement, doc.id, categoryName);
+                    });
+                    
+                    // 삭제 버튼 클릭
+                    const deleteBtn = card.querySelector('.delete-category-btn');
+                    if (deleteBtn) {
+                        deleteBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            deleteCategory(doc.id, categoryName);
+                        });
+                    }
+                } else {
+                    const checkbox = card.querySelector('.category-checkbox');
+                    checkbox.addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            selectedCategories.push(categoryName);
+                        } else {
+                            selectedCategories = selectedCategories.filter(c => c !== categoryName);
+                        }
+                    });
+                }
+
+                categoryList.appendChild(card);
+            });
+        }
+
+        async function updatePendingCount(cardElement, categoryName) {
+            if (!memosCollectionRef) return;
+            try {
+                const q = query(memosCollectionRef, 
+                    where("category", "==", categoryName), 
+                    where("completed", "==", false)
+                );
+                const snapshot = await getDocs(q);
+                const count = snapshot.size;
+                
+                const countElement = cardElement.querySelector('.pending-count');
+                if (countElement) {
+                    countElement.textContent = `${count}개 진행 중`;
+                }
+            } catch (error) {
+                console.error(`Error fetching count for ${categoryName}:`, error);
+                const countElement = cardElement.querySelector('.pending-count');
+                if (countElement) {
+                    countElement.textContent = `개수 로드 실패`;
+                }
+            }
+        }
+
+        function renderMemos(snapshot, listElement) {
+            listElement.innerHTML = '';
+            
+            if (snapshot.empty) {
+                const message = '진행 중인 메모가 없습니다.';
+                listElement.innerHTML = `<p class="text-gray-500 col-span-full text-center">${message}</p>`;
+                return;
+            }
+
+            snapshot.docs.forEach(doc => {
+                const memo = doc.data();
+                const memoId = doc.id;
+
+                const iconColor = 'text-gray-400';
+                const textStyle = 'text-gray-900';
+                
+                const memoDiv = document.createElement('div');
+                memoDiv.className = 'p-4 bg-white rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-200';
+                memoDiv.dataset.id = memoId;
+
+                memoDiv.innerHTML = `
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 ${iconColor} mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="${textStyle} break-words whitespace-pre-wrap flex-1">${escapeHTML(memo.content)}</p>
+                    </div>
+                `;
+
+                memoDiv.addEventListener('click', () => openMemoModal(memoId, memo.content));
+                
+                listElement.appendChild(memoDiv);
+            });
+        }
+
+        function renderPoints(docSnap) {
+            currentPoints = (docSnap && docSnap.exists()) ? docSnap.data().value || 0 : 0;
+            pointsDisplay.textContent = `${currentPoints} P`;
+            if (totalPointsDisplay) {
+                totalPointsDisplay.textContent = `${currentPoints} P`;
+            }
+        }
+        
+        // 포인트 내역 렌더링
+        function renderPointHistory(snapshot) {
+            pointHistoryList.innerHTML = '';
+            
+            if (snapshot.empty) {
+                pointHistoryList.innerHTML = '<p class="text-gray-500 text-center py-8">아직 포인트 적립 내역이 없습니다.</p>';
+                return;
+            }
+            
+            const history = [];
+            snapshot.docs.forEach(doc => {
+                history.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // 최신순 정렬
+            history.sort((a, b) => {
+                if (a.timestamp && b.timestamp) {
+                    return b.timestamp.toMillis() - a.timestamp.toMillis();
+                }
+                return 0;
+            });
+            
+            history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-lg p-4 shadow-md flex justify-between items-center';
+                
+                const date = item.timestamp ? item.timestamp.toDate().toLocaleString('ko-KR') : '날짜 없음';
+                const pointsClass = item.points >= 1000 ? 'text-yellow-600 text-2xl' : 'text-green-600 text-xl';
+                const icon = item.points >= 1000 ? '🏆' : '✓';
+                
+                div.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-900">${escapeHTML(item.description || '메모 완료')}</p>
+                        <p class="text-sm text-gray-500">${date}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl mr-2">${icon}</span>
+                        <span class="${pointsClass} font-bold">+${item.points} P</span>
+                    </div>
+                `;
+                
+                pointHistoryList.appendChild(div);
+            });
+        }
+
+        function showToast() {
+            toastMessage.classList.remove('opacity-0', 'translate-y-5');
+            toastMessage.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toastMessage.classList.remove('opacity-100', 'translate-y-0');
+                toastMessage.classList.add('opacity-0', 'translate-y-5');
+            }, 2000);
+            
+            // 음성 재생 (여자 목소리)
+            speakText("잘했어요!");
+        }
+        
+        // 텍스트를 음성으로 재생하는 함수
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                // 기존 음성이 재생 중이면 중지
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR'; // 한국어 설정
+                utterance.rate = 1.0; // 속도 (0.1 ~ 10)
+                utterance.pitch = 1.2; // 음높이 (0 ~ 2, 높을수록 여성스러움)
+                utterance.volume = 1.0; // 볼륨 (0 ~ 1)
+                
+                // 한국어 여성 목소리 찾기
+                const voices = window.speechSynthesis.getVoices();
+                const koreanFemaleVoice = voices.find(voice => 
+                    voice.lang.includes('ko') && voice.name.includes('Female')
+                ) || voices.find(voice => 
+                    voice.lang.includes('ko')
+                );
+                
+                if (koreanFemaleVoice) {
+                    utterance.voice = koreanFemaleVoice;
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 음성 목록 로드 (페이지 로드 시)
+        if ('speechSynthesis' in window) {
+            // 일부 브라우저에서는 음성 목록이 비동기로 로드됨
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
+
+        // --- 모달 함수 ---
+        function openMemoModal(memoId, content) {
+            modalMemoId.value = memoId;
+            modalMemoText.value = content;
+            memoModal.classList.remove('hidden');
+            setTimeout(() => {
+                memoModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function hideMemoModal() {
+            memoModal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                memoModal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- 이벤트 핸들러 ---
+        
+        // 카테고리 이름 수정
+        function editCategoryName(nameElement, categoryId, currentName) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentName;
+            input.className = 'text-2xl font-bold text-gray-800 bg-white border-2 border-blue-500 rounded px-2 py-1 w-full';
+            
+            nameElement.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            async function saveName() {
+                const newName = input.value.trim();
+                if (newName === '' || newName === currentName) {
+                    const h3 = document.createElement('h3');
+                    h3.className = 'text-2xl font-bold text-gray-800 category-name';
+                    h3.dataset.categoryId = categoryId;
+                    h3.textContent = currentName;
+                    input.replaceWith(h3);
+                    
+                    h3.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        editCategoryName(h3, categoryId, currentName);
+                    });
+                    return;
+                }
+                
+                try {
+                    const categoryRef = doc(db, 'users', userId, 'categories', categoryId);
+                    await updateDoc(categoryRef, { name: newName });
+                } catch (error) {
+                    console.error("Error updating category name: ", error);
+                    alert('카테고리 이름 변경 실패');
+                }
+            }
+            
+            input.addEventListener('blur', saveName);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    input.blur();
+                } else if (e.key === 'Escape') {
+                    const h3 = document.createElement('h3');
+                    h3.className = 'text-2xl font-bold text-gray-800 category-name';
+                    h3.dataset.categoryId = categoryId;
+                    h3.textContent = currentName;
+                    input.replaceWith(h3);
+                    
+                    h3.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        editCategoryName(h3, categoryId, currentName);
+                    });
+                }
+            });
+        }
+        
+        async function handleAddCategory(event) {
+            event.preventDefault();
+            if (!isAuthReady) return;
+            const name = categoryNameInput.value.trim();
+            if (name === '') return;
+
+            try {
+                await addDoc(categoriesCollectionRef, { name: name });
+                categoryNameInput.value = '';
+            } catch (error) {
+                console.error("Error adding category: ", error);
+            }
+        }
+        
+        // 카테고리 삭제
+        async function deleteCategory(categoryId, categoryName) {
+            if (!confirm(`"${categoryName}" 카테고리를 삭제하시겠습니까?\n관련된 모든 메모도 함께 삭제됩니다.`)) {
+                return;
+            }
+            
+            try {
+                // 해당 카테고리의 모든 메모 삭제
+                const memosQuery = query(memosCollectionRef, where("category", "==", categoryName));
+                const memosSnapshot = await getDocs(memosQuery);
+                
+                const deletePromises = [];
+                memosSnapshot.docs.forEach(memoDoc => {
+                    deletePromises.push(deleteDoc(doc(db, 'users', userId, 'memos', memoDoc.id)));
+                });
+                
+                // 카테고리 삭제
+                deletePromises.push(deleteDoc(doc(db, 'users', userId, 'categories', categoryId)));
+                
+                await Promise.all(deletePromises);
+                
+                console.log(`Category "${categoryName}" and its memos deleted successfully`);
+            } catch (error) {
+                console.error("Error deleting category: ", error);
+                alert('카테고리 삭제 실패');
+            }
+        }
+
+        async function handleAddMemo(event) {
+            event.preventDefault();
+            if (!isAuthReady || !currentCategory) return;
+            const content = memoContentInput.value.trim();
+            if (content === '') return;
+
+            try {
+                await addDoc(memosCollectionRef, { 
+                    content: content,
+                    category: currentCategory,
+                    completed: false,
+                    createdAt: Timestamp.now()
+                });
+                memoContentInput.value = '';
+            } catch (error) {
+                console.error("Error adding memo: ", error);
+            }
+        }
+
+        // 메모 수정
+        async function handleUpdateMemo() {
+            const docId = modalMemoId.value;
+            const newContent = modalMemoText.value.trim();
+            if (!isAuthReady || !docId || newContent === '') return;
+
+            const docRef = doc(db, 'users', userId, 'memos', docId);
+            try {
+                await updateDoc(docRef, {
+                    content: newContent
+                });
+                hideMemoModal();
+            } catch (error) {
+                console.error("Error updating memo: ", error);
+            }
+        }
+
+        // 메모 삭제 (포인트 없음)
+        async function handleDeleteMemo() {
+            const docId = modalMemoId.value;
+            if (!isAuthReady || !docId) return;
+
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+
+            const docRef = doc(db, 'users', userId, 'memos', docId);
+            try {
+                await deleteDoc(docRef);
+                hideMemoModal();
+                showToast(); // "잘했어요!" 메시지 표시
+            } catch (error) {
+                console.error("Error deleting memo: ", error);
+            }
+        }
+
+        // 메모 완료 (포인트 적립 + 삭제)
+        async function completeAndRemoveMemo() {
+            const docId = modalMemoId.value;
+            if (!isAuthReady || !docId) return;
+
+            try {
+                // 메모 정보 가져오기
+                const memoRef = doc(db, 'users', userId, 'memos', docId);
+                const memoSnap = await getDoc(memoRef);
+                const memoData = memoSnap.data();
+                const memoCategory = memoData.category;
+                
+                // 포인트 적립
+                const newPoints = currentPoints + 500;
+                await setDoc(pointsDocRef, { value: newPoints });
+                
+                // 포인트 내역 추가
+                await addDoc(pointHistoryCollectionRef, {
+                    points: 500,
+                    description: `${memoCategory} - 메모 완료`,
+                    timestamp: Timestamp.now()
+                });
+                
+                showToast(); // "잘했어요!" 메시지
+
+                // DB에서 문서 삭제
+                await deleteDoc(memoRef); 
+                
+                // 해당 카테고리의 남은 메모 확인
+                await checkCategoryCompletion(memoCategory);
+                
+                hideMemoModal();
+            } catch (error) {
+                console.error("Error completing and removing memo: ", error);
+            }
+        }
+        
+        // 카테고리 완료 체크
+        async function checkCategoryCompletion(categoryName) {
+            try {
+                const q = query(
+                    memosCollectionRef,
+                    where("category", "==", categoryName),
+                    where("completed", "==", false)
+                );
+                const snapshot = await getDocs(q);
+                
+                // 남은 메모가 없으면
+                if (snapshot.empty) {
+                    // 1000 포인트 적립
+                    const newPoints = currentPoints + 1000;
+                    await setDoc(pointsDocRef, { value: newPoints });
+                    
+                    // 포인트 내역 추가
+                    await addDoc(pointHistoryCollectionRef, {
+                        points: 1000,
+                        description: `${categoryName} - 모두 완료! 🎉`,
+                        timestamp: Timestamp.now()
+                    });
+                    
+                    // 특별 메시지 표시
+                    showAchievementMessage(categoryName);
+                }
+            } catch (error) {
+                console.error("Error checking category completion: ", error);
+            }
+        }
+        
+        // "멋지게 해냈습니다!" 메시지 표시
+        function showAchievementMessage(categoryName) {
+            achievementCategory.textContent = `${categoryName} 카테고리의 모든 메모를 완료했습니다!`;
+            achievementMessage.classList.remove('hidden');
+            setTimeout(() => {
+                achievementMessage.classList.remove('opacity-0');
+                achievementMessage.querySelector('div').classList.remove('scale-95');
+                achievementMessage.querySelector('div').classList.add('scale-100');
+            }, 10);
+            
+            // 음성 재생
+            speakText("멋지게 해냈습니다!");
+        }
+        
+        function hideAchievementMessage() {
+            achievementMessage.classList.add('opacity-0');
+            achievementMessage.querySelector('div').classList.remove('scale-100');
+            achievementMessage.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                achievementMessage.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- 유틸리티 ---
+        function escapeHTML(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return {'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'}[m];
+            });
+        }
+
+        // --- 앱 시작 ---
+        categoryForm.addEventListener('submit', handleAddCategory);
+        memoForm.addEventListener('submit', handleAddMemo);
+        backToHomeBtn.addEventListener('click', showHomePage);
+        backToHomeMultiBtn.addEventListener('click', showHomePage);
+        backToHomePointsBtn.addEventListener('click', showHomePage);
+        pointHistoryBtn.addEventListener('click', showPointHistoryPage);
+        pointsBox.addEventListener('click', showPointHistoryPage);
+        achievementCloseBtn.addEventListener('click', hideAchievementMessage);
+        
+        // 멀티뷰 버튼 클릭
+        multiViewBtn.addEventListener('click', () => {
+            if (!isMultiViewMode) {
+                isMultiViewMode = true;
+                selectedCategories = [];
+                multiViewBtn.textContent = '선택 완료';
+                multiViewBtn.classList.remove('bg-white', 'hover:bg-gray-50', 'text-gray-900');
+                multiViewBtn.classList.add('bg-red-500', 'hover:bg-red-600', 'text-white');
+                setupCategoryListener(); // 다시 렌더링
+            } else {
+                showMultiViewPage();
+            }
+        });
+        
+        // 멀티뷰 열 개수 버튼
+        multiColButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentMultiCols = parseInt(btn.getAttribute('data-multi-cols'));
+                updateMultiViewColumns();
+            });
+        });
+
+        // 모달 버튼 리스너
+        modalSaveBtn.addEventListener('click', handleUpdateMemo); // 수정
+        modalDeleteBtn.addEventListener('click', handleDeleteMemo); // 삭제
+        modalCompleteBtn.addEventListener('click', completeAndRemoveMemo); // 완료
+        modalCancelBtn.addEventListener('click', hideMemoModal); // 취소
+        
+        // 모달 바깥 영역 클릭 시 닫기
+        memoModal.addEventListener('click', (e) => {
+            if (e.target === memoModal) {
+                hideMemoModal();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setHeaderColor();
+            initFirebase();
+        });
+
+    </script>
+</body>
+</html>
