@@ -297,30 +297,19 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        console.log("Authenticated User ID:", userId);
-                        
-                        categoriesCollectionRef = collection(db, 'users', userId, 'categories');
-                        memosCollectionRef = collection(db, 'users', userId, 'memos');
-                        pointsDocRef = doc(db, 'users', userId, 'userData', 'points');
-                        pointHistoryCollectionRef = collection(db, 'users', userId, 'pointHistory');
+                // 고정 사용자 ID 사용 (모든 기기에서 동일한 데이터 공유)
+                userId = "soeun-shared-user";
+                isAuthReady = true;
+                console.log("Using fixed User ID:", userId);
+                
+                categoriesCollectionRef = collection(db, 'users', userId, 'categories');
+                memosCollectionRef = collection(db, 'users', userId, 'memos');
+                pointsDocRef = doc(db, 'users', userId, 'userData', 'points');
+                pointHistoryCollectionRef = collection(db, 'users', userId, 'pointHistory');
 
-                        setupPointsListener();
-                        await checkAndSeedCategories();
-                        showHomePage();
-
-                    } else {
-                        isAuthReady = false;
-                        console.log("No user signed in.");
-                        if (unsubscribeCategories) unsubscribeCategories();
-                        if (unsubscribePendingMemos) unsubscribePendingMemos();
-                    }
-                });
-
-                await signInAnonymously(auth);
+                setupPointsListener();
+                await checkAndSeedCategories();
+                showHomePage();
 
             } catch (error) {
                 console.error("Firebase Init Error:", error);
