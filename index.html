@@ -81,21 +81,11 @@
 
         <!-- 헤더: 타이틀 및 포인트 (항상 보임) -->
 		<header id="app-header" class="flex justify-between items-center mb-8 p-6 rounded-3xl shadow-lg transition-colors duration-500" style="background: #b9c3ff;">
-			<div class="flex items-center gap-4">
-				<div class="w-14 h-14 rounded-2xl bg-white bg-opacity-60 flex items-center justify-center">
-					<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<circle cx="12" cy="12" r="10" fill="#ffffff"/>
-						<circle cx="9" cy="10" r="1.5" fill="#5c6bc0"/>
-						<circle cx="15" cy="10" r="1.5" fill="#5c6bc0"/>
-						<path d="M8 14c1.2 1.2 2.8 1.8 4 1.8s2.8-.6 4-1.8" stroke="#5c6bc0" stroke-width="1.5" stroke-linecap="round" />
-					</svg>
-				</div>
-				<div>
-					<h1 class="text-3xl font-extrabold text-white">소은이의 메모장</h1>
-					<p class="text-white text-opacity-90 text-sm mt-1">잊지 않게 적어두세요!</p>
-				</div>
+			<div class="flex-1"></div>
+			<div class="flex items-center justify-center">
+				<img src="./soeun-header.png" alt="header image" class="h-20 w-20 object-cover rounded-full shadow"/>
 			</div>
-			<div class="flex items-center gap-4">
+			<div class="flex-1 flex justify-end items-center gap-4">
 				<button id="point-history-btn" class="hidden md:block bg-white bg-opacity-90 hover:bg-opacity-100 text-purple-600 font-bold py-3 px-6 rounded-full transition duration-300 text-lg shadow-lg">⭐ 포인트 내역</button>
 				<div class="text-right cursor-pointer bg-white bg-opacity-90 p-4 rounded-2xl shadow-lg" id="points-box">
 					<span class="text-sm text-purple-600 font-bold">🏆 총 포인트</span>
@@ -416,7 +406,7 @@
             currentCategory = null;
             isMultiViewMode = false;
             selectedCategories = [];
-            appHeader.querySelector('h1').textContent = '소은이의 메모장';
+            // 헤더는 이미지만 표시하므로 텍스트 변경하지 않음
             multiViewBtn.textContent = '멀티뷰 선택';
             multiViewBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'text-white');
             multiViewBtn.classList.add('bg-white', 'hover:bg-gray-50', 'text-gray-900');
@@ -435,7 +425,7 @@
             detailPage.classList.add('hidden');
             multiViewPage.classList.add('hidden');
             pointHistoryPage.classList.remove('hidden');
-            appHeader.querySelector('h1').textContent = '포인트 내역';
+            // 헤더 텍스트 사용 안 함
             
             if (unsubscribeCategories) unsubscribeCategories();
             
@@ -449,7 +439,6 @@
             pointHistoryPage.classList.add('hidden');
             currentCategory = categoryName;
             
-            appHeader.querySelector('h1').textContent = categoryName;
             memoContentInput.placeholder = `'${categoryName}'에 새 메모 추가...`;
 
             if (unsubscribeCategories) unsubscribeCategories();
@@ -468,7 +457,7 @@
             detailPage.classList.add('hidden');
             multiViewPage.classList.remove('hidden');
             pointHistoryPage.classList.add('hidden');
-            appHeader.querySelector('h1').textContent = '멀티뷰';
+            // 헤더 텍스트 사용 안 함
             
             if (unsubscribeCategories) unsubscribeCategories();
             
@@ -671,17 +660,8 @@
                 const categoryName = category.name;
 
                 const card = document.createElement('div');
-                card.className = 'p-6 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 border flex items-start bg-white';
-                
-                // 좌측 연두색 포인트 바
-                const strip = document.createElement('div');
-                strip.style.width = '8px';
-                strip.style.height = '100%';
-                strip.style.borderRadius = '8px';
-                strip.style.backgroundColor = '#7ae3b2';
-                strip.style.marginRight = '12px';
-                card.appendChild(strip);
-                
+                card.className = 'p-6 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 border bg-white';
+
                 const contentWrap = document.createElement('div');
                 contentWrap.className = 'flex-1';
                 contentWrap.innerHTML = `
@@ -778,20 +758,10 @@
                 const textStyle = 'text-gray-900';
                 
                 const memoDiv = document.createElement('div');
-                memoDiv.className = 'p-4 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 border bg-white flex';
+                memoDiv.className = 'p-4 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 border bg-white';
                 memoDiv.dataset.id = memoId;
 
-                const strip = document.createElement('div');
-                strip.style.width = '8px';
-                strip.style.borderRadius = '8px';
-                strip.style.backgroundColor = '#7ae3b2';
-                strip.style.marginRight = '12px';
-                memoDiv.appendChild(strip);
-
-                const inner = document.createElement('div');
-                inner.className = 'flex-1';
-                inner.innerHTML = `<p class="${textStyle} break-words whitespace-pre-wrap text-base font-semibold">${escapeHTML(memo.content)}</p>`;
-                memoDiv.appendChild(inner);
+                memoDiv.innerHTML = `<p class="${textStyle} break-words whitespace-pre-wrap text-base font-semibold">${escapeHTML(memo.content)}</p>`;
 
                 memoDiv.addEventListener('click', () => openMemoModal(memoId, memo.content));
                 
