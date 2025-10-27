@@ -81,18 +81,18 @@
 
         <!-- 헤더: 타이틀 및 포인트 (항상 보임) -->
 		<header id="app-header" class="flex justify-between items-center mb-8 p-6 rounded-3xl shadow-lg transition-colors duration-500" style="background: #b9c3ff;">
-			<div class="flex-1"></div>
-			<div class="flex items-center justify-center">
-				<img src="./soeun-header.png" alt="header image" class="h-20 w-20 object-cover rounded-full shadow"/>
+			<div class="w-20"></div>
+			<div id="header-image-wrap" class="flex-1 flex items-center justify-center">
+				<img src="soeun-header.png" alt="header image" class="h-20 w-20 object-cover rounded-full shadow"/>
 			</div>
-			<div class="flex-1 flex justify-end items-center gap-4">
+			<div id="points-wrap" class="flex items-center gap-4">
 				<button id="point-history-btn" class="hidden md:block bg-white bg-opacity-90 hover:bg-opacity-100 text-purple-600 font-bold py-3 px-6 rounded-full transition duration-300 text-lg shadow-lg">⭐ 포인트 내역</button>
 				<div class="text-right cursor-pointer bg-white bg-opacity-90 p-4 rounded-2xl shadow-lg" id="points-box">
 					<span class="text-sm text-purple-600 font-bold">🏆 총 포인트</span>
 					<p id="points-display" class="text-3xl font-bold text-purple-600">0 P</p>
 				</div>
 			</div>
-		</header>
+ 		</header>
 
         <!-- 홈 페이지: 카테고리 대시보드 -->
         <main id="home-page">
@@ -118,12 +118,13 @@
 
         <!-- 상세 페이지: 단일 카테고리 메모 목록 -->
         <main id="detail-page" class="hidden">
-            <button id="back-to-home" class="mb-6 bg-white text-gray-900 font-bold py-3 px-6 rounded-full shadow transition duration-200 text-lg border" style="border-color:#d9dfff;">
+            <button id="back-to-home" class="mb-2 bg-white text-gray-900 font-bold py-3 px-6 rounded-full shadow transition duration-200 text-lg border" style="border-color:#d9dfff;">
                 🏠 홈으로 돌아가기
             </button>
+            <h2 id="detail-category-title" class="text-2xl font-extrabold text-gray-800 mb-4"></h2>
 
 			<form id="memo-form" class="bg-white p-6 rounded-3xl shadow-lg mb-8 border-2" style="border-color:#d9dfff;">
-				<textarea id="memo-content" rows="3" placeholder="여기에 메모를 입력..." class="w-full px-5 py-3 border-2 rounded-2xl focus:ring-4 transition duration-200 resize-none text-lg" style="border-color:#d9dfff;"></textarea>
+				<textarea id="memo-content" rows="3" placeholder="" class="w-full px-5 py-3 border-2 rounded-2xl focus:ring-4 transition duration-200 resize-none text-lg" style="border-color:#d9dfff;"></textarea>
 				<button type="submit" class="w-full mt-4 text-white font-extrabold py-4 px-6 rounded-2xl transition duration-300 shadow-lg flex items-center justify-center text-lg" style="background-color:#34d48a;">
 					<svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<rect x="5" y="3" width="14" height="18" rx="2" fill="white" fill-opacity="0.2"/>
@@ -133,7 +134,7 @@
 				</button>
 			</form>
 
-            <h3 class="text-3xl font-bold mb-6 text-blue-600">📝 할 일 목록</h3>
+            <h3 class="text-3xl font-bold mb-6 text-gray-800">📝 할 일 목록</h3>
             <div id="memo-list-pending" class="grid grid-cols-1 gap-4"></div>
         </main>
 
@@ -327,6 +328,7 @@
         const memoForm = document.getElementById('memo-form');
         const memoContentInput = document.getElementById('memo-content');
         const memoListPending = document.getElementById('memo-list-pending'); 
+        const detailCategoryTitle = document.getElementById('detail-category-title');
 
         const memoModal = document.getElementById('memo-modal');
         const modalContent = document.getElementById('modal-content');
@@ -406,7 +408,8 @@
             currentCategory = null;
             isMultiViewMode = false;
             selectedCategories = [];
-            // 헤더는 이미지만 표시하므로 텍스트 변경하지 않음
+            // 헤더는 홈에서 표시
+            if (appHeader) appHeader.style.display = '';
             multiViewBtn.textContent = '멀티뷰 선택';
             multiViewBtn.classList.remove('bg-red-500', 'hover:bg-red-600', 'text-white');
             multiViewBtn.classList.add('bg-white', 'hover:bg-gray-50', 'text-gray-900');
@@ -425,7 +428,8 @@
             detailPage.classList.add('hidden');
             multiViewPage.classList.add('hidden');
             pointHistoryPage.classList.remove('hidden');
-            // 헤더 텍스트 사용 안 함
+            // 헤더는 표시
+            if (appHeader) appHeader.style.display = '';
             
             if (unsubscribeCategories) unsubscribeCategories();
             
@@ -438,8 +442,12 @@
             multiViewPage.classList.add('hidden');
             pointHistoryPage.classList.add('hidden');
             currentCategory = categoryName;
+            // 상세 페이지에서는 헤더 숨김
+            if (appHeader) appHeader.style.display = 'none';
             
             memoContentInput.placeholder = `'${categoryName}'에 새 메모 추가...`;
+            const titleEl = document.getElementById('detail-category-title');
+            if (titleEl) titleEl.textContent = categoryName;
 
             if (unsubscribeCategories) unsubscribeCategories();
 
@@ -457,7 +465,8 @@
             detailPage.classList.add('hidden');
             multiViewPage.classList.remove('hidden');
             pointHistoryPage.classList.add('hidden');
-            // 헤더 텍스트 사용 안 함
+            // 헤더는 표시
+            if (appHeader) appHeader.style.display = '';
             
             if (unsubscribeCategories) unsubscribeCategories();
             
@@ -744,12 +753,9 @@
         function renderMemos(snapshot, listElement) {
             listElement.innerHTML = '';
             
-            if (snapshot.empty) {
-                const message = '🎈 아직 할 일이 없어요!';
-                listElement.innerHTML = `<p class="text-purple-500 col-span-full text-center text-2xl font-bold">${message}</p>`;
-                return;
-            }
-
+            // 비어 있어도 메시지를 표시하지 않음
+            if (snapshot.empty) return;
+            
             snapshot.docs.forEach(doc => {
                 const memo = doc.data();
                 const memoId = doc.id;
@@ -826,15 +832,7 @@
         }
 
         function showToast() {
-            toastMessage.classList.remove('opacity-0', 'translate-y-5');
-            toastMessage.classList.add('opacity-100', 'translate-y-0');
-            setTimeout(() => {
-                toastMessage.classList.remove('opacity-100', 'translate-y-0');
-                toastMessage.classList.add('opacity-0', 'translate-y-5');
-            }, 2000);
-            
-            // 음성 재생 (여자 목소리)
-            speakText("잘했어요!");
+            // 토스트 메시지 제거됨
         }
         
         // 텍스트를 음성으로 재생하는 함수
@@ -1044,7 +1042,7 @@
             }
         }
 
-        // 메모 완료 (포인트 적립 + 삭제)
+        // 메모 완료 (포인트 적립 + 애니메이션 + 삭제)
         async function completeAndRemoveMemo() {
             const docId = modalMemoId.value;
             if (!isAuthReady || !docId) return;
@@ -1067,63 +1065,345 @@
                     timestamp: Timestamp.now()
                 });
                 
-                showToast(); // "잘했어요!" 메시지
-
-                // DB에서 문서 삭제
-                await deleteDoc(memoRef); 
-                
-                // 해당 카테고리의 남은 메모 확인
-                await checkCategoryCompletion(memoCategory);
-                
+                // 모달 닫기
                 hideMemoModal();
+                
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // 메모 카드 애니메이션
+                await animateMemoDelete(docId);
+                
+                // DB에서 메모 삭제
+                await deleteDoc(memoRef);
+                
             } catch (error) {
                 console.error("Error completing and removing memo: ", error);
             }
         }
         
-        // 카테고리 완료 체크
-        async function checkCategoryCompletion(categoryName) {
+        // 메모 카드 삭제 애니메이션
+        async function animateMemoDelete(memoId) {
+            console.log('🎯 메모 삭제 애니메이션 시작:', memoId);
+            
             try {
-                const q = query(
-                    memosCollectionRef,
-                    where("category", "==", categoryName),
-                    where("completed", "==", false)
-                );
-                const snapshot = await getDocs(q);
+                // 메모 카드 찾기
+                const memoCard = document.querySelector(`[data-id="${memoId}"]`);
                 
-                // 남은 메모가 없으면
-                if (snapshot.empty) {
-                    // 1000 포인트 적립
-                    const newPoints = currentPoints + 1000;
-                    await setDoc(pointsDocRef, { value: newPoints });
-                    
-                    // 포인트 내역 추가
-                    await addDoc(pointHistoryCollectionRef, {
-                        points: 1000,
-                        description: `${categoryName} - 모두 완료! 🎉`,
-                        timestamp: Timestamp.now()
-                    });
-                    
-                    // 특별 메시지 표시
-                    showAchievementMessage(categoryName);
+                if (!memoCard) {
+                    console.error('❌ 메모 카드를 찾을 수 없음');
+                    return;
                 }
+                
+                console.log('✅ 메모 카드 찾음');
+                
+                const cardRect = memoCard.getBoundingClientRect();
+                console.log('📦 메모 카드 위치:', cardRect);
+                
+                // 캐릭터 생성 - 화면 중앙
+                const character = document.createElement('div');
+                character.style.position = 'fixed';
+                character.style.zIndex = '9999';
+                character.style.pointerEvents = 'none';
+                character.style.left = '50%';
+                character.style.top = '50%';
+                character.style.transform = 'translate(-50%, -50%)';
+                character.style.opacity = '0';
+                character.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                
+                const charImg = document.createElement('img');
+                charImg.src = 'character.png';
+                charImg.style.width = '150px';
+                charImg.style.height = 'auto';
+                charImg.style.transform = 'scaleX(-1)';
+                charImg.onerror = () => {
+                    character.innerHTML = '<div style="font-size:100px">🔨</div>';
+                };
+                character.appendChild(charImg);
+                
+                document.body.appendChild(character);
+                console.log('👤 캐릭터 생성');
+                
+                // 등장
+                setTimeout(() => character.style.opacity = '1', 50);
+                
+                await new Promise(resolve => setTimeout(resolve, 400));
+                
+                // 망치 스윙 준비
+                character.style.transform = 'translate(-50%, -50%) rotate(-25deg)';
+                console.log('🔄 스윙 준비');
+                
+                await new Promise(resolve => setTimeout(resolve, 150));
+                
+                // 망치 스윙!
+                character.style.transform = 'translate(-50%, -50%) rotate(10deg)';
+                console.log('💥 스윙!');
+                
+                await new Promise(resolve => setTimeout(resolve, 120));
+                
+                // 폭죽! (화면 중앙 상단에서)
+                console.log('🎆 폭죽 발사');
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 3;
+                createFireworks(centerX, centerY);
+                playFireworkSound();
+                
+                // 메모 카드 타격
+                memoCard.style.transition = 'all 0.25s ease';
+                memoCard.style.transform = 'scale(0.85) rotate(5deg)';
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // 메모 카드 날아가며 사라짐
+                memoCard.style.transition = 'all 0.4s ease';
+                memoCard.style.transform = 'scale(0) rotate(45deg) translateX(100px)';
+                memoCard.style.opacity = '0';
+                console.log('💨 메모 카드 날아감');
+                
+                await new Promise(resolve => setTimeout(resolve, 400));
+                
+                // 캐릭터 퇴장 (제자리에서 페이드 아웃)
+                character.style.opacity = '0';
+                console.log('👋 캐릭터 퇴장');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                character.remove();
+                
             } catch (error) {
-                console.error("Error checking category completion: ", error);
+                console.error('❌ 메모 애니메이션 에러:', error);
             }
         }
         
-        // "멋지게 해냈습니다!" 메시지 표시
-        function showAchievementMessage(categoryName) {
-            achievementCategory.textContent = `${categoryName} 카테고리의 모든 메모를 완료했습니다!`;
-            achievementMessage.classList.remove('hidden');
-            setTimeout(() => {
-                achievementMessage.classList.remove('opacity-0');
-                achievementMessage.querySelector('div').classList.remove('scale-95');
-                achievementMessage.querySelector('div').classList.add('scale-100');
-            }, 10);
+        // 카테고리 완료 체크 - 더 이상 사용 안 함
+        async function checkCategoryCompletion(categoryName) {
+            // 카테고리는 삭제하지 않음
+        }
+        
+        // 캐릭터 망치 애니메이션 + 폭죽 + 카테고리 삭제
+        async function showAchievementMessage(categoryName) {
+            console.log('🎯 애니메이션 시작:', categoryName);
             
-            // 음성 재생
-            speakText("멋지게 해냈습니다!");
+            try {
+                // 먼저 카테고리 ID 찾기 (삭제 전)
+                let categoryIdToDelete = null;
+                const cardsSnapshot = await getDocs(categoriesCollectionRef);
+                cardsSnapshot.docs.forEach(d => {
+                    if (d.data().name === categoryName) {
+                        categoryIdToDelete = d.id;
+                    }
+                });
+                
+                console.log('📍 카테고리 ID:', categoryIdToDelㅁete);
+                
+                // 홈으로 돌아가기
+                showHomePage();
+                
+                await new Promise(resolve => setTimeout(resolve, 600));
+                
+                // 해당 카테고리 카드 찾기
+                const cards = Array.from(categoryList.children);
+                const targetCard = cards.find(card => {
+                    const nameEl = card.querySelector('.category-name');
+                    return nameEl && nameEl.textContent === categoryName;
+                });
+                
+                if (!targetCard) {
+                    console.error('❌ 카드를 찾을 수 없음');
+                    return;
+                }
+                
+                console.log('✅ 카드 찾음');
+                
+                const cardRect = targetCard.getBoundingClientRect();
+                console.log('📦 카드 위치:', cardRect);
+                
+                // 캐릭터 생성 (이미지 로드 대기 없이 바로 진행)
+                const character = document.createElement('div');
+                character.style.position = 'fixed';
+                character.style.zIndex = '9999';
+                character.style.pointerEvents = 'none';
+                character.style.left = (cardRect.left - 200) + 'px';
+                character.style.top = (cardRect.top - 50) + 'px';
+                character.style.opacity = '0';
+                character.style.transition = 'opacity 0.3s ease, left 0.5s ease, transform 0.3s ease';
+                const charImg = document.createElement('img');
+                charImg.src = 'character.png';
+                charImg.style.width = '180px';
+                charImg.style.height = 'auto';
+                charImg.style.transform = 'scaleX(-1)';
+                charImg.onerror = () => {
+                    character.innerHTML = '<div style="font-size:120px">🔨</div>';
+                };
+                character.appendChild(charImg);
+                
+                document.body.appendChild(character);
+                console.log('👤 캐릭터 생성');
+                
+                // 등장
+                setTimeout(() => character.style.opacity = '1', 50);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 망치 스윙 준비
+                character.style.transform = 'rotate(-30deg)';
+                console.log('🔄 스윙 준비');
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // 망치 스윙!
+                character.style.transform = 'rotate(15deg)';
+                console.log('💥 스윙!');
+                
+                await new Promise(resolve => setTimeout(resolve, 150));
+                
+                // 폭죽 먼저!
+                console.log('🎆 폭죽 발사');
+                createFireworks(cardRect.left + cardRect.width/2, cardRect.top + cardRect.height/2);
+                
+                // 카드 타격
+                targetCard.style.transition = 'all 0.3s ease';
+                targetCard.style.transform = 'scale(0.85) rotate(5deg)';
+                
+                await new Promise(resolve => setTimeout(resolve, 400));
+                
+                // 카드 날아가며 사라짐
+                targetCard.style.transition = 'all 0.5s ease';
+                targetCard.style.transform = 'scale(0) rotate(90deg) translateY(-150px)';
+                targetCard.style.opacity = '0';
+                console.log('💨 카드 날아감');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 캐릭터 퇴장
+                character.style.left = (cardRect.left - 400) + 'px';
+                character.style.opacity = '0';
+                console.log('👋 캐릭터 퇴장');
+                
+                await new Promise(resolve => setTimeout(resolve, 600));
+                character.remove();
+                
+                // 이제 DB에서 카테고리 삭제
+                if (categoryIdToDelete) {
+                    const categoryRef = doc(db, 'users', userId, 'categories', categoryIdToDelete);
+                    await deleteDoc(categoryRef);
+                    console.log('🗑️ DB에서 삭제 완료');
+                }
+            } catch (error) {
+                console.error('❌ 애니메이션 에러:', error);
+            }
+        }
+        
+        // 폭죽 효과 - 위로 올라가며 터짐
+        function createFireworks(x, y) {
+            const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a8e6cf', '#ff8787', '#ffa07a', '#98d8c8'];
+            
+            // 3개의 폭죽을 순차적으로 발사
+            for (let wave = 0; wave < 3; wave++) {
+                setTimeout(() => {
+                    for (let i = 0; i < 40; i++) {
+                        const particle = document.createElement('div');
+                        particle.style.position = 'fixed';
+                        particle.style.left = x + 'px';
+                        particle.style.top = y + 'px';
+                        particle.style.width = '10px';
+                        particle.style.height = '10px';
+                        particle.style.borderRadius = '50%';
+                        particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                        particle.style.pointerEvents = 'none';
+                        particle.style.zIndex = '9998';
+                        particle.style.boxShadow = '0 0 4px ' + colors[Math.floor(Math.random() * colors.length)];
+                        
+                        const angle = (Math.PI * 2 * i) / 40;
+                        const velocity = 150 + Math.random() * 150;
+                        const vx = Math.cos(angle) * velocity;
+                        const vy = Math.sin(angle) * velocity - 100; // 위로 더 강하게
+                        
+                        document.body.appendChild(particle);
+                        
+                        let px = x, py = y;
+                        let frame = 0;
+                        const animate = () => {
+                            frame++;
+                            px += vx * 0.016;
+                            py += vy * 0.016 + frame * 0.8; // 중력
+                            particle.style.left = px + 'px';
+                            particle.style.top = py + 'px';
+                            particle.style.opacity = Math.max(0, 1 - frame / 70);
+                            particle.style.transform = `scale(${1 - frame / 70})`;
+                            
+                            if (frame < 70) requestAnimationFrame(animate);
+                            else particle.remove();
+                        };
+                        animate();
+                    }
+                }, wave * 150);
+            }
+        }
+        
+        // 폭죽 소리 재생 - 진짜 폭죽 "펑파팡!"
+        function playFireworkSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 3번의 폭죽 폭발음
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        // 큰 폭발음을 위한 화이트 노이즈
+                        const bufferSize = audioContext.sampleRate * 0.5;
+                        const buffer = audioContext.createBuffer(2, bufferSize, audioContext.sampleRate);
+                        
+                        for (let channel = 0; channel < 2; channel++) {
+                            const data = buffer.getChannelData(channel);
+                            for (let i = 0; i < bufferSize; i++) {
+                                data[i] = Math.random() * 2 - 1;
+                            }
+                        }
+                        
+                        const noise = audioContext.createBufferSource();
+                        noise.buffer = buffer;
+                        
+                        // 로우패스 필터로 둔탁한 폭발음
+                        const filter = audioContext.createBiquadFilter();
+                        filter.type = 'lowpass';
+                        filter.frequency.setValueAtTime(300, audioContext.currentTime);
+                        filter.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+                        filter.Q.value = 0.5;
+                        
+                        const gain = audioContext.createGain();
+                        
+                        noise.connect(filter);
+                        filter.connect(gain);
+                        gain.connect(audioContext.destination);
+                        
+                        // 급격하게 커졌다가 서서히 사라지는 폭발음
+                        gain.gain.setValueAtTime(0, audioContext.currentTime);
+                        gain.gain.linearRampToValueAtTime(0.8, audioContext.currentTime + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                        
+                        noise.start(audioContext.currentTime);
+                        noise.stop(audioContext.currentTime + 0.5);
+                        
+                        // 폭발의 "우웅~" 하는 저음
+                        const bass = audioContext.createOscillator();
+                        const bassGain = audioContext.createGain();
+                        bass.connect(bassGain);
+                        bassGain.connect(audioContext.destination);
+                        
+                        bass.type = 'sine';
+                        bass.frequency.setValueAtTime(80, audioContext.currentTime);
+                        bass.frequency.exponentialRampToValueAtTime(20, audioContext.currentTime + 0.3);
+                        
+                        bassGain.gain.setValueAtTime(0, audioContext.currentTime);
+                        bassGain.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.02);
+                        bassGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                        
+                        bass.start(audioContext.currentTime);
+                        bass.stop(audioContext.currentTime + 0.4);
+                        
+                    }, i * 250);
+                }
+            } catch (error) {
+                console.log('오디오 재생 불가:', error);
+            }
         }
         
         function hideAchievementMessage() {
@@ -1169,18 +1449,18 @@
         }
 
         // --- 앱 시작 ---
-        categoryForm.addEventListener('submit', handleAddCategory);
-        memoForm.addEventListener('submit', handleAddMemo);
-        backToHomeBtn.addEventListener('click', showHomePage);
-        backToHomeMultiBtn.addEventListener('click', showHomePage);
-        backToHomePointsBtn.addEventListener('click', showHomePage);
-        pointHistoryBtn.addEventListener('click', showPointHistoryPage);
-        pointsBox.addEventListener('click', showPointHistoryPage);
-        resetPointsBtn.addEventListener('click', resetPoints);
-        achievementCloseBtn.addEventListener('click', hideAchievementMessage);
+        if (categoryForm) categoryForm.addEventListener('submit', handleAddCategory);
+        if (memoForm) memoForm.addEventListener('submit', handleAddMemo);
+        if (backToHomeBtn) backToHomeBtn.addEventListener('click', showHomePage);
+        if (backToHomeMultiBtn) backToHomeMultiBtn.addEventListener('click', showHomePage);
+        if (backToHomePointsBtn) backToHomePointsBtn.addEventListener('click', showHomePage);
+        if (pointHistoryBtn) pointHistoryBtn.addEventListener('click', showPointHistoryPage);
+        if (pointsBox) pointsBox.addEventListener('click', showPointHistoryPage);
+        if (resetPointsBtn) resetPointsBtn.addEventListener('click', resetPoints);
+        if (achievementCloseBtn) achievementCloseBtn.addEventListener('click', hideAchievementMessage);
         
         // 멀티뷰 버튼 클릭
-        multiViewBtn.addEventListener('click', () => {
+        if (multiViewBtn) multiViewBtn.addEventListener('click', () => {
             if (!isMultiViewMode) {
                 isMultiViewMode = true;
                 selectedCategories = [];
